@@ -1,17 +1,17 @@
 -- Variables
 
 local blockedPeds = {
-    'mp_m_freemode_01',
-    'mp_f_freemode_01',
-    'tony',
-    'g_m_m_chigoon_02_m',
-    'u_m_m_jesus_01',
-    'a_m_y_stbla_m',
-    'ig_terry_m',
-    'a_m_m_ktown_m',
-    'a_m_y_skater_m',
-    'u_m_y_coop',
-    'ig_car3guy1_m',
+    "mp_m_freemode_01",
+    "mp_f_freemode_01",
+    "tony",
+    "g_m_m_chigoon_02_m",
+    "u_m_m_jesus_01",
+    "a_m_y_stbla_m",
+    "ig_terry_m",
+    "a_m_m_ktown_m",
+    "a_m_y_skater_m",
+    "u_m_y_coop",
+    "ig_car3guy1_m",
 }
 
 local lastSpectateCoord = nil
@@ -20,30 +20,34 @@ local isSpectating = false
 -- Events
 
 RegisterNetEvent('qb-admin:client:inventory', function(targetPed)
-    TriggerServerEvent('inventory:server:OpenInventory', 'otherplayer', targetPed)
+    TriggerServerEvent("inventory:server:OpenInventory", "otherplayer", targetPed)
 end)
 
-RegisterNetEvent('qb-admin:client:spectate', function(targetPed)
+RegisterNetEvent('qb-admin:client:spectate', function(targetPed, coords)
     local myPed = PlayerPedId()
-    local targetplayer = GetPlayerFromServerId(targetPed)
-    local target = GetPlayerPed(targetplayer)
     if not isSpectating then
         isSpectating = true
-        SetEntityVisible(myPed, false)                  -- Set invisible
-        SetEntityCollision(myPed, false, false)         -- Set collision
-        SetEntityInvincible(myPed, true)                -- Set invincible
+        lastSpectateCoord = GetEntityCoords(myPed) -- save my last coords
+        SetEntityVisible(myPed, false) -- Set invisible
+        SetEntityCollision(myPed, false, false) -- Set collision
+        SetEntityInvincible(myPed, true) -- Set invincible
         NetworkSetEntityInvisibleToNetwork(myPed, true) -- Set invisibility
-        lastSpectateCoord = GetEntityCoords(myPed)      -- save my last coords
-        NetworkSetInSpectatorMode(true, target)         -- Enter Spectate Mode
+        SetEntityCoords(myPed, coords.x, coords.y, coords.z + 2.0)
+        Wait(500)
+        local targetplayer = GetPlayerFromServerId(targetPed)
+        local target = GetPlayerPed(targetplayer)
+        NetworkSetInSpectatorMode(true, target) -- Enter Spectate Mode
     else
         isSpectating = false
-        NetworkSetInSpectatorMode(false, target)         -- Remove From Spectate Mode
+        local targetplayer = GetPlayerFromServerId(targetPed)
+        local target = GetPlayerPed(targetplayer)
+        NetworkSetInSpectatorMode(false, target) -- Remove From Spectate Mode
         NetworkSetEntityInvisibleToNetwork(myPed, false) -- Set Visible
-        SetEntityCollision(myPed, true, true)            -- Set collision
-        SetEntityCoords(myPed, lastSpectateCoord)        -- Return Me To My Coords
-        SetEntityVisible(myPed, true)                    -- Remove invisible
-        SetEntityInvincible(myPed, false)                -- Remove godmode
-        lastSpectateCoord = nil                          -- Reset Last Saved Coords
+        SetEntityCollision(myPed, true, true) -- Set collision
+        SetEntityCoords(myPed, lastSpectateCoord) -- Return Me To My Coords
+        SetEntityVisible(myPed, true) -- Remove invisible
+        SetEntityInvincible(myPed, false) -- Remove godmode
+        lastSpectateCoord = nil -- Reset Last Saved Coords
     end
 end)
 
@@ -52,11 +56,11 @@ RegisterNetEvent('qb-admin:client:SendReport', function(name, src, msg)
 end)
 
 local function getVehicleFromVehList(hash)
-    for _, v in pairs(QBCore.Shared.Vehicles) do
-        if hash == v.hash then
-            return v.model
-        end
-    end
+	for _, v in pairs(QBCore.Shared.Vehicles) do
+		if hash == v.hash then
+			return v.model
+		end
+	end
 end
 
 
@@ -73,17 +77,17 @@ RegisterNetEvent('qb-admin:client:SaveCar', function()
         if QBCore.Shared.Vehicles[vehname] ~= nil and next(QBCore.Shared.Vehicles[vehname]) ~= nil then
             TriggerServerEvent('qb-admin:server:SaveCar', props, QBCore.Shared.Vehicles[vehname], GetHashKey(veh), plate)
         else
-            QBCore.Functions.Notify(Lang:t('error.no_store_vehicle_garage'), 'error')
+            QBCore.Functions.Notify(Lang:t("error.no_store_vehicle_garage"), 'info')
         end
     else
-        QBCore.Functions.Notify(Lang:t('error.no_vehicle'), 'error')
+        QBCore.Functions.Notify(Lang:t("error.no_vehicle"), 'info')
     end
 end)
 
 local function LoadPlayerModel(skin)
     RequestModel(skin)
     while not HasModelLoaded(skin) do
-        Wait(0)
+      Wait(0)
     end
 end
 
@@ -110,19 +114,36 @@ RegisterNetEvent('qb-admin:client:SetModel', function(skin)
             SetPedRandomComponentVariation(ped, true)
         end
 
-        SetModelAsNoLongerNeeded(model)
-    end
-    SetEntityInvincible(ped, false)
+		SetModelAsNoLongerNeeded(model)
+	end
+	SetEntityInvincible(ped, false)
 end)
 
 RegisterNetEvent('qb-admin:client:SetSpeed', function(speed)
     local ped = PlayerId()
-    if speed == 'fast' then
+    if speed == "fast" then
         SetRunSprintMultiplierForPlayer(ped, 1.49)
         SetSwimMultiplierForPlayer(ped, 1.49)
     else
         SetRunSprintMultiplierForPlayer(ped, 1.0)
         SetSwimMultiplierForPlayer(ped, 1.0)
+    end
+end)
+
+RegisterNetEvent('qb-weapons:client:SetWeaponAmmoManual', function(weapon, ammo)
+    local ped = PlayerPedId()
+    if weapon ~= "current" then
+        weapon = weapon:upper()
+        SetPedAmmo(ped, GetHashKey(weapon), ammo)
+        QBCore.Functions.Notify(Lang:t("info.ammoforthe", {value = ammo, weapon = QBCore.Shared.Weapons[weapon]["label"]}), 'success')
+    else
+        weapon = GetSelectedPedWeapon(ped)
+        if weapon ~= nil then
+            SetPedAmmo(ped, weapon, ammo)
+            QBCore.Functions.Notify(Lang:t("info.ammoforthe", {value = ammo, weapon = QBCore.Shared.Weapons[weapon]["label"]}), 'success')
+        else
+            QBCore.Functions.Notify(Lang:t("error.no_weapon"), 'info')
+        end
     end
 end)
 
@@ -141,7 +162,11 @@ function PerformanceUpgradeVehicle(vehicle, customWheels)
             SetVehicleMod(vehicle, modType, max, customWheels)
         end
         ToggleVehicleMod(vehicle, 18, true) -- Turbo
-        SetVehicleFixed(vehicle)
+        ToggleVehicleMod(vehicle, 11, true) -- Engine
+        ToggleVehicleMod(vehicle, 12, true) -- Brake
+        ToggleVehicleMod(vehicle, 13, true) -- Transmission
+        ToggleVehicleMod(vehicle, 15, true) -- Suspension
+	SetVehicleFixed(vehicle)
     end
 end
 
@@ -149,3 +174,4 @@ RegisterNetEvent('qb-admin:client:maxmodVehicle', function()
     local vehicle = GetVehiclePedIsIn(PlayerPedId())
     PerformanceUpgradeVehicle(vehicle)
 end)
+
